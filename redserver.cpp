@@ -25,6 +25,7 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include "buffer.h"
 
 #define TCP_NODELAY 0x0001
 #define INVALID_SOCKET (-1)
@@ -108,121 +109,6 @@ static int create_and_bind(const char *port, const char *address=NULL)
 
 	return sfd;
 }
-
-/**
- * Simple Object Pool
- * 简单对象池的实现
- * 使用unique_ptr实现自动回收
- * 原文：http://www.csdn.net/article/2015-11-27/2826344-C++
- */
-template<typename T>
-class ObjectPoolAutoRelease
-{
-private:
-    std::vector<std::unique_ptr<T>> pool;
-public:
-    using DeleteType = std::function<void(T*)>;
-
-    ObjectPoolAutoRelease(size_t n = 0xFF)
-    {
-        allocNObjs(n);
-    }
-
-    void add(std::unique_ptr<T> t)
-    {
-        pool.push_back(std::move(t));
-    }
-
-    std::unique_ptr<T, DeleteType> getObject()
-    {
-        if(pool.empty())
-        {
-            //allocNObjs(0x10);
-            throw std::logic_error("No more object");
-        }
-        std::unique_ptr<T, DeleteType> ptr(pool.back().release(), [this](T *t)
-        {
-            pool.push_back(std::unique_ptr<T>(t));
-        });
-        pool.pop_back();
-        return ptr;
-    }
-
-    void releaseObject(T *obj)
-    {
-        pool.push(obj);
-    }
-
-    void allocNObjs(size_t n)
-    {
-        for(size_t i = 0; i < n; i++)
-        {
-            pool.push_back(std::unique_ptr<T>(new T));
-        }
-    }
-
-    size_t count() const
-    {
-        return pool.size();
-    }
-};
-
-/**
- * 简单的对象池
- * 用户手动放回对象
- * 默认首次分配255个对象，如果没有可用对象则抛出logic_error异常
- * 类型T必须有默认构造函数
- * @note 没有考虑线程安全和扩容等问题
- */
-template<typename T>
-class ObjectPool
-{
-private:
-    std::vector<T*> pool;
-public:
-    ObjectPool(size_t n = 0xFF)
-    {
-        allocObjs(n);
-    }
-
-    ~ObjectPool()
-    {
-        printf("Release all objects.\n");
-        while(!pool.empty())
-        {
-            auto o = pool.back();
-            delete o;
-            pool.pop_back();
-        }
-    }
-
-    void allocObjs(size_t n)
-    {
-        for(size_t i = 0; i < n; i++) 
-            pool.push_back(new T());
-    }
-
-    T* getObject()
-    {
-        if(pool.empty()) {
-            throw std::logic_error("No more object");
-        }
-        auto o = pool.back();
-        pool.pop_back();
-        printf("[@@@@@@@@] Allocate obj %p ON POOL(%p) AVAILIABLE(%lu)\n", static_cast<void *>(o), this, pool.size());
-        return o;
-    }
-    void releaseObject(T *o)
-    {
-        pool.push_back(o);
-        printf("[@@@@@@@@] Release obj %p ON POOL(%p) AVAILIBLE(%lu)\n", static_cast<void *>(o), this, pool.size());
-    }
-    size_t count() const
-    {
-        return pool.size();
-    }
-};
-
 /**
  * epoll 封装类的基类
  */
@@ -238,7 +124,7 @@ public:
     int Control(int op, int fd, struct epoll_event *event)
     {
 #ifndef NDEBUG
-        printf("[%8d] epoll_ctl op = %s [@Handler:%p]\n", fd, op_str[op], event->data.ptr);
+        printf("[%8d] epoll_ctl op = %s [@Handler:%p]\n", fd, op_str[op], static_cast<int *>(event->data.ptr));
         //printf("[%8d] epoll_ctl op = %s \n", fd, op_str[op]);
 #endif
         int ret = epoll_ctl(epoll_fd, op, fd, event);
@@ -328,12 +214,12 @@ class ConnectionListener : public EventHandlerBase
 private:
     /**
      * 对象池：对象在ConnectionListener::HandleRead中分配，在ConnectionHandler::HandleError中释放。
-     * TODO: 记得在ConnectionHandler处理连接断开时把资源放回对象池中。
+     * @note: 记得在ConnectionHandler处理连接断开时把资源放回对象池中。
      */
-    ObjectPool<TConnectionHandler> objPool; 
+    jinger::CObjectPool<TConnectionHandler> objPool; 
 
 public:
-    ConnectionListener(EPollBase *ep) : EventHandlerBase(ep){}
+    ConnectionListener(EPollBase *ep) : EventHandlerBase(ep), objPool("ConnectionHandler"){}
     ~ConnectionListener()
     {
         if(sfd != INVALID_SOCKET)
@@ -389,7 +275,8 @@ public:
 
 			printf_address(connfd, (struct sockaddr *)&sa, sa_len, "Accept");
 
-            auto handler = objPool.getObject();
+            //auto handler = objPool.getObject();
+            auto handler = objPool.Alloc();
             handler->SetEPoll(epoll);
             handler->Process(connfd, sa, sa_len);
        }
@@ -592,8 +479,7 @@ public:
     {
         Exit();
         EventHandlerBase::HandleError();
-        /* How to call objPool.releaseObject(this) ? Memory Leak Here */
-        //ConnectionListener<ConnectionHandler>::objPool.releaseObject(this);
+        jinger::Release(this); /* release handler to object pool */
     }
 
 private:
