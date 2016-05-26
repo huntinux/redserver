@@ -177,6 +177,7 @@ namespace jinger
 			}
 			else
 			{
+                /* 单向循环链表 */
 				CObjectStubT<T> *i = new CObjectStubT<T>();
 				if (!i) return nullptr;
 				i->Next = head->Next;
