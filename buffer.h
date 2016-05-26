@@ -45,6 +45,18 @@ namespace jinger
 		}
 	};
 
+    /**
+     * 对象池中的每个节点如图所示
+     *  ----------
+     * | RefCount |
+     *  ----------
+     * | Next     | -----> 
+     *  ----------
+     * | T        |
+     *  ----------
+     * 在返回对象时，只是返回T的地址a, 所以可以通过a减去相对偏移，
+     * 计算出该节点的地址,从而调用相应的函数。
+     */
 	template<typename T>
 	struct CObjectStubT : public CObjectStub
 	{
@@ -54,7 +66,7 @@ namespace jinger
 	static CObjectStub &Object(const void *obj)
 	{
 		CObjectStub *i;
-		i = (CObjectStub *)(((char*)obj) - sizeof(CObjectStub));
+		i = (CObjectStub *)(((char*)obj) - sizeof(CObjectStub)); // 得到指向T所在节点的首地址，联想一下内存对象布局
 		return *i;
 	}
 
@@ -163,6 +175,13 @@ namespace jinger
 
 		int GetCount() { return count; }
 
+        /**
+         * 返回对象池中的一个对象T的指针
+         * 数据结构是一个单向循环链表，head是头节点，tail是head的前驱。
+         * 优先返回tail节点中的对象T，然后是head节点。如果它们都被引用了
+         * 就新分配一个节点i。让i插入到head的后面，然后tail指向i，最后
+         * head指向tail的next。
+         */
 		TBase *Alloc()
 		{
 			if (tail->RefCount == 0)
