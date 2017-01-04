@@ -2,6 +2,7 @@
  * non-block connect with epoll 
  * 2017年01月04日14:37:19
  * jinger
+ * refer: http://stackoverflow.com/questions/10187347/async-connect-and-disconnect-with-epoll-linux
  */
 
 #include<stdio.h>
