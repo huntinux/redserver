@@ -10,7 +10,7 @@ typedef unsigned char byte;
 namespace jinger 
 {
     /**
-     *  ¶ÔÏó³Ø
+     *  å¯¹è±¡æ± 
      */
 	template<class _Ty>
 	class CPoolPtr;
@@ -46,7 +46,7 @@ namespace jinger
 	};
 
     /**
-     * ¶ÔÏó³ØÖĞµÄÃ¿¸ö½ÚµãÈçÍ¼ËùÊ¾
+     * å¯¹è±¡æ± ä¸­çš„æ¯ä¸ªèŠ‚ç‚¹å¦‚å›¾æ‰€ç¤º
      *  ----------
      * | RefCount |
      *  ----------
@@ -54,8 +54,8 @@ namespace jinger
      *  ----------
      * | T        |
      *  ----------
-     * ÔÚ·µ»Ø¶ÔÏóÊ±£¬Ö»ÊÇ·µ»ØTµÄµØÖ·a, ËùÒÔ¿ÉÒÔÍ¨¹ıa¼õÈ¥Ïà¶ÔÆ«ÒÆ£¬
-     * ¼ÆËã³ö¸Ã½ÚµãµÄµØÖ·,´Ó¶øµ÷ÓÃÏàÓ¦µÄº¯Êı¡£
+     * åœ¨è¿”å›å¯¹è±¡æ—¶ï¼Œåªæ˜¯è¿”å›Tçš„åœ°å€a, æ‰€ä»¥å¯ä»¥é€šè¿‡aå‡å»ç›¸å¯¹åç§»ï¼Œ
+     * è®¡ç®—å‡ºè¯¥èŠ‚ç‚¹çš„åœ°å€,ä»è€Œè°ƒç”¨ç›¸åº”çš„å‡½æ•°ã€‚
      */
 	template<typename T>
 	struct CObjectStubT : public CObjectStub
@@ -66,7 +66,7 @@ namespace jinger
 	static CObjectStub &Object(const void *obj)
 	{
 		CObjectStub *i;
-		i = (CObjectStub *)(((char*)obj) - sizeof(CObjectStub)); // µÃµ½Ö¸ÏòTËùÔÚ½ÚµãµÄÊ×µØÖ·£¬ÁªÏëÒ»ÏÂÄÚ´æ¶ÔÏó²¼¾Ö
+		i = (CObjectStub *)(((char*)obj) - sizeof(CObjectStub)); // å¾—åˆ°æŒ‡å‘Tæ‰€åœ¨èŠ‚ç‚¹çš„é¦–åœ°å€ï¼Œè”æƒ³ä¸€ä¸‹å†…å­˜å¯¹è±¡å¸ƒå±€
 		return *i;
 	}
 
@@ -176,11 +176,11 @@ namespace jinger
 		int GetCount() { return count; }
 
         /**
-         * ·µ»Ø¶ÔÏó³ØÖĞµÄÒ»¸ö¶ÔÏóTµÄÖ¸Õë
-         * Êı¾İ½á¹¹ÊÇÒ»¸öµ¥ÏòÑ­»·Á´±í£¬headÊÇÍ·½Úµã£¬tailÊÇheadµÄÇ°Çı¡£
-         * ÓÅÏÈ·µ»Øtail½ÚµãÖĞµÄ¶ÔÏóT£¬È»ºóÊÇhead½Úµã¡£Èç¹ûËüÃÇ¶¼±»ÒıÓÃÁË
-         * ¾ÍĞÂ·ÖÅäÒ»¸ö½Úµãi¡£ÈÃi²åÈëµ½headµÄºóÃæ£¬È»ºótailÖ¸Ïòi£¬×îºó
-         * headÖ¸ÏòtailµÄnext¡£
+         * è¿”å›å¯¹è±¡æ± ä¸­çš„ä¸€ä¸ªå¯¹è±¡Tçš„æŒ‡é’ˆ
+         * æ•°æ®ç»“æ„æ˜¯ä¸€ä¸ªå•å‘å¾ªç¯é“¾è¡¨ï¼Œheadæ˜¯å¤´èŠ‚ç‚¹ï¼Œtailæ˜¯headçš„å‰é©±ã€‚
+         * ä¼˜å…ˆè¿”å›tailèŠ‚ç‚¹ä¸­çš„å¯¹è±¡Tï¼Œç„¶åæ˜¯headèŠ‚ç‚¹ã€‚å¦‚æœå®ƒä»¬éƒ½è¢«å¼•ç”¨äº†
+         * å°±æ–°åˆ†é…ä¸€ä¸ªèŠ‚ç‚¹iã€‚è®©iæ’å…¥åˆ°headçš„åé¢ï¼Œç„¶åtailæŒ‡å‘iï¼Œæœ€å
+         * headæŒ‡å‘tailçš„nextã€‚
          */
 		TBase *Alloc()
 		{
@@ -196,8 +196,8 @@ namespace jinger
 			}
 			else
 			{
-                /* µ¥ÏòÑ­»·Á´±í */
-				CObjectStubT<T> *i = new CObjectStubT<T>();
+                /* å•å‘å¾ªç¯é“¾è¡¨ */
+				CObjectStubT<T> *i = new(std::nothrow) CObjectStubT<T>();
 				if (!i) return nullptr;
 				i->Next = head->Next;
 				head->Next = i;
@@ -247,13 +247,13 @@ namespace jinger
 	};
 
 
-    /* ÏÂÃæÊÇ¶ÔÏó³ØµÄÒ»Ğ©¼òµ¥ÊµÏÖ */
+    /* ä¸‹é¢æ˜¯å¯¹è±¡æ± çš„ä¸€äº›ç®€å•å®ç° */
 
     /**
      * Simple Object Pool
-     * ¼òµ¥¶ÔÏó³ØµÄÊµÏÖ
-     * Ê¹ÓÃunique_ptrÊµÏÖ×Ô¶¯»ØÊÕ
-     * Ô­ÎÄ£ºhttp://www.csdn.net/article/2015-11-27/2826344-C++
+     * ç®€å•å¯¹è±¡æ± çš„å®ç°
+     * ä½¿ç”¨unique_ptrå®ç°è‡ªåŠ¨å›æ”¶
+     * åŸæ–‡ï¼šhttp://www.csdn.net/article/2015-11-27/2826344-C++
      */
     template<typename T>
     class ObjectPoolAutoRelease
@@ -308,11 +308,11 @@ namespace jinger
     };
     
     /**
-     * ¼òµ¥µÄ¶ÔÏó³Ø
-     * ÓÃ»§ÊÖ¶¯·Å»Ø¶ÔÏó
-     * Ä¬ÈÏÊ×´Î·ÖÅä255¸ö¶ÔÏó£¬Èç¹ûÃ»ÓĞ¿ÉÓÃ¶ÔÏóÔòÅ×³ölogic_errorÒì³£
-     * ÀàĞÍT±ØĞëÓĞÄ¬ÈÏ¹¹Ôìº¯Êı
-     * @note Ã»ÓĞ¿¼ÂÇÏß³Ì°²È«ºÍÀ©ÈİµÈÎÊÌâ
+     * ç®€å•çš„å¯¹è±¡æ± 
+     * ç”¨æˆ·æ‰‹åŠ¨æ”¾å›å¯¹è±¡
+     * é»˜è®¤é¦–æ¬¡åˆ†é…255ä¸ªå¯¹è±¡ï¼Œå¦‚æœæ²¡æœ‰å¯ç”¨å¯¹è±¡åˆ™æŠ›å‡ºlogic_errorå¼‚å¸¸
+     * ç±»å‹Tå¿…é¡»æœ‰é»˜è®¤æ„é€ å‡½æ•°
+     * @note æ²¡æœ‰è€ƒè™‘çº¿ç¨‹å®‰å…¨å’Œæ‰©å®¹ç­‰é—®é¢˜
      */
     template<typename T>
     class ObjectPool
